@@ -42,6 +42,59 @@ h1 small{font-family:var(--f-mono);font-weight:400;font-size:12px;color:var(--mu
 .stage{position:relative;width:100%;aspect-ratio:1000/940;max-width:100%;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .stage > svg.console{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 
+/* ---------- shell skins ---------- */
+.stage{
+  --k-edge1:#4a4e56;--k-edge2:#1a1b1e;
+  --k-body1:#2d3036;--k-body2:#1c1e22;--k-body3:#131417;
+  --k-deck1:#2a2d33;--k-deck2:#202226;--k-deck3:#18191c;
+  --k-deck-under:#0e0f11;--k-deck-line:#3a3d44;--k-deck-hi:#4d515a;
+  --k-flap1:#3a3d44;--k-flap2:#22242a;
+  --k-knob1:#5b6069;--k-knob2:#2b2e34;--k-knob-ridge:#22252a;
+  --k-reset1:#4b4f57;--k-reset2:#25272c;--k-reset3:#16171a;--k-reset-ring:#1a1c20;
+  --k-print:#5b616a;--k-print-strong:#7d838d;--k-screws:#2f3238;--k-holes:#0b0c0e;
+  --k-band-lo:#0b0c0e;--k-band-hi:#3a3d44;--k-logo:#4a4e56;--k-logo-sh:#0c0d0f;
+  --k-rib1:#1c1e22;--k-rib2:#0a0b0c;
+  --k-mon1:#2a2d33;--k-mon2:#141619;--k-mon3:#0c0d0f;--k-mon-hi:#3a3e45;--k-badge:#6c727c;
+}
+.stage[data-skin="white"]{
+  --k-edge1:#ffffff;--k-edge2:#a7a49d;
+  --k-body1:#f3f1ec;--k-body2:#e4e1da;--k-body3:#d2cec6;
+  --k-deck1:#fbfaf7;--k-deck2:#efede8;--k-deck3:#e0ddd5;
+  --k-deck-under:#b4b0a8;--k-deck-line:#d3d0c9;--k-deck-hi:#ffffff;
+  --k-flap1:#dcd9d2;--k-flap2:#b8b5ad;
+  --k-knob1:#ffffff;--k-knob2:#cdc9c1;--k-knob-ridge:#a19e96;
+  --k-reset1:#ffffff;--k-reset2:#e6e3dc;--k-reset3:#bdb9b1;--k-reset-ring:#c3bfb7;
+  --k-print:#8f8b83;--k-print-strong:#6a665f;--k-screws:#c8c4bc;--k-holes:#4a4844;
+  --k-band-lo:#c3bfb7;--k-band-hi:#ffffff;--k-logo:#a29e95;--k-logo-sh:#ffffff;
+  --k-rib1:#ebe8e2;--k-rib2:#bcb8b0;
+  --k-mon1:#f6f4ef;--k-mon2:#e2dfd8;--k-mon3:#cbc7bf;--k-mon-hi:#ffffff;--k-badge:#8f8b83;
+}
+#gEdge stop:nth-child(1){stop-color:var(--k-edge1)}#gEdge stop:nth-child(2){stop-color:var(--k-edge2)}
+#gBody stop:nth-child(1){stop-color:var(--k-body1)}#gBody stop:nth-child(2){stop-color:var(--k-body2)}#gBody stop:nth-child(3){stop-color:var(--k-body3)}
+#gDeck stop:nth-child(1){stop-color:var(--k-deck1)}#gDeck stop:nth-child(2){stop-color:var(--k-deck2)}#gDeck stop:nth-child(3){stop-color:var(--k-deck3)}
+#gFlap stop:nth-child(1){stop-color:var(--k-flap1)}#gFlap stop:nth-child(2){stop-color:var(--k-flap2)}
+#gKnob stop:nth-child(1){stop-color:var(--k-knob1)}#gKnob stop:nth-child(2){stop-color:var(--k-knob2)}
+#gReset stop:nth-child(1){stop-color:var(--k-reset1)}#gReset stop:nth-child(2){stop-color:var(--k-reset2)}#gReset stop:nth-child(3){stop-color:var(--k-reset3)}
+.sk.deck-under{fill:var(--k-deck-under)}.sk.deck-top{stroke:var(--k-deck-line)}.sk.deck-hi{stroke:var(--k-deck-hi)}
+.sk.print{fill:var(--k-print)}.sk.print-strong{fill:var(--k-print-strong)}.sk.screws{fill:var(--k-screws)}.sk.holes{fill:var(--k-holes)}
+.sk.band-lo{stroke:var(--k-band-lo)}.sk.band-hi{stroke:var(--k-band-hi)}.sk.logo{fill:var(--k-logo)}.sk.logo-sh{fill:var(--k-logo-sh)}
+.sk.rib1{fill:var(--k-rib1)}.sk.rib2{fill:var(--k-rib2)}.sk.knob-ridge{stroke:var(--k-knob-ridge)}.sk.reset-ring{stroke:var(--k-reset-ring)}
+.console stop,.sk{transition:fill .5s ease,stroke .5s ease,stop-color .5s ease}
+.screen{transition:background .5s ease}
+@media (prefers-reduced-motion:reduce){.console stop,.sk{transition:none}}
+
+/* skin switcher */
+.skins{display:flex;align-items:center;gap:10px;font:500 11px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;gap:4px;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--ground-2)}
+.seg button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:6px 11px 6px 7px;border-radius:999px;font:500 13px/1 var(--f-body);letter-spacing:0;text-transform:none;color:var(--muted);transition:background .15s,color .15s}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-checked="true"]{background:#272c34;color:var(--ink)}
+.seg button:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+.seg .sw{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}
+.sw-black{background:linear-gradient(160deg,#3a3d44,#141518)}
+.sw-white{background:linear-gradient(160deg,#ffffff,#cfcbc3)}
+.head-r{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;min-width:0}
+
 /* svg moving parts */
 .flap{transition:transform .45s cubic-bezier(.6,.05,.3,1);transform-box:fill-box}
 .stage.open .flap-l{transform:translateX(-96%)}
@@ -77,10 +130,10 @@ h1 small{font-family:var(--f-mono);font-weight:400;font-size:12px;color:var(--mu
 /* ---------- Monitor ---------- */
 .screen{position:absolute;left:22.5%;width:55%;top:47%;aspect-ratio:10/7.4;max-width:100%;box-sizing:border-box;
   container-type:inline-size;
-  background:linear-gradient(160deg,#2a2d33 0%,#141619 55%,#0c0d0f 100%);
+  background:linear-gradient(160deg,var(--k-mon1) 0%,var(--k-mon2) 55%,var(--k-mon3) 100%);
   border-radius:3.2%/4.6%;padding:2.6% 2.6% 5.2%;
-  box-shadow:0 2px 0 #3a3e45 inset,0 -1px 0 #000 inset,0 30px 50px -14px rgba(0,0,0,.85),0 10px 18px rgba(0,0,0,.5);}
-.screen .badge{position:absolute;left:3.4%;bottom:1.4%;font:400 1.55cqw/1 var(--f-brand);letter-spacing:.32em;color:#6c727c}
+  box-shadow:0 2px 0 var(--k-mon-hi) inset,0 -1px 0 #000 inset,0 30px 50px -14px rgba(0,0,0,.85),0 10px 18px rgba(0,0,0,.5);}
+.screen .badge{position:absolute;left:3.4%;bottom:1.4%;font:400 1.55cqw/1 var(--f-brand);letter-spacing:.32em;color:var(--k-badge);transition:color .5s}
 .screen .pwr{position:absolute;right:3.6%;bottom:1.8%;width:1.4cqw;height:1.4cqw;border-radius:50%;background:#2d1310;transition:background .2s,box-shadow .2s}
 .stage.power .screen .pwr{background:var(--led);box-shadow:0 0 1.6cqw var(--led)}
 .glass{position:relative;width:100%;height:100%;border-radius:4%/5.6%;overflow:hidden;background:#07090a;
@@ -155,7 +208,15 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
 <div class="wrap">
   <header>
     <h1>Орбита‑16 <small>16‑bit · эмулятор</small></h1>
-    <div class="status" id="status" data-s="load" role="status"><i></i><span id="statusText">Загружаю ядро Genesis Plus GX…</span></div>
+    <div class="head-r">
+      <div class="skins"><span id="skinLbl">Корпус</span>
+        <div class="seg" role="radiogroup" aria-labelledby="skinLbl">
+          <button type="button" role="radio" aria-checked="true" data-skin="black" id="skinBlack"><i class="sw sw-black"></i>Чёрный</button>
+          <button type="button" role="radio" aria-checked="false" data-skin="white" id="skinWhite"><i class="sw sw-white"></i>Белый</button>
+        </div>
+      </div>
+      <div class="status" id="status" data-s="load" role="status"><i></i><span id="statusText">Загружаю ядро Genesis Plus GX…</span></div>
+    </div>
   </header>
 
   <div class="stage" id="stage">
@@ -195,7 +256,7 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
         </filter>
         <clipPath id="slotClip"><rect x="372" y="68" width="256" height="30" rx="4"/></clipPath>
         <pattern id="ribs" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-32)">
-          <rect width="12" height="12" fill="#1c1e22"/><rect width="6" height="12" fill="#0a0b0c"/>
+          <rect class="sk rib1" width="12" height="12" fill="#1c1e22"/><rect class="sk rib2" width="6" height="12" fill="#0a0b0c"/>
         </pattern>
       </defs>
 
@@ -206,12 +267,12 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
         <path d="M94 22H906Q976 22 976 92V494Q976 548 928 566L564 602H436L72 566Q24 548 24 494V92Q24 22 94 22Z" fill="url(#gBody)"/>
         <path d="M94 22H906Q976 22 976 92V494Q976 548 928 566L564 602H436L72 566Q24 548 24 494V92Q24 22 94 22Z" fill="#fff" filter="url(#grain)"/>
         <!-- raised deck -->
-        <rect x="60" y="52" width="880" height="470" rx="42" fill="#0e0f11"/>
-        <rect x="60" y="48" width="880" height="470" rx="42" fill="url(#gDeck)" stroke="#3a3d44" stroke-width="1.2"/>
-        <path d="M102 50H898" stroke="#4d515a" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+        <rect class="sk deck-under" x="60" y="52" width="880" height="470" rx="42" fill="#0e0f11"/>
+        <rect class="sk deck-top" x="60" y="48" width="880" height="470" rx="42" fill="url(#gDeck)" stroke="#3a3d44" stroke-width="1.2"/>
+        <path class="sk deck-hi" d="M102 50H898" stroke="#4d515a" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
 
         <!-- rear edge details -->
-        <g font-family="IBM Plex Mono, monospace" font-size="9" fill="#5b616a" letter-spacing="1.5">
+        <g class="sk print" font-family="IBM Plex Mono, monospace" font-size="9" fill="#5b616a" letter-spacing="1.5">
           <rect x="120" y="26" width="44" height="12" rx="3" fill="#0d0e10"/>
           <text x="172" y="36">DC 9V</text>
           <rect x="836" y="26" width="44" height="12" rx="3" fill="#0d0e10"/>
@@ -227,8 +288,8 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
           <g class="flap flap-l"><rect x="372" y="68" width="128" height="30" fill="url(#gFlap)"/><path d="M498 69V97" stroke="#0a0a0b" stroke-width="2"/><path d="M380 72H494" stroke="#575b63" stroke-width="1" opacity=".6"/></g>
           <g class="flap flap-r"><rect x="500" y="68" width="128" height="30" fill="url(#gFlap)"/><path d="M502 69V97" stroke="#0a0a0b" stroke-width="2"/><path d="M506 72H620" stroke="#575b63" stroke-width="1" opacity=".6"/></g>
         </g>
-        <text x="500" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" letter-spacing="3.5" fill="#5d636c">CARTRIDGE · 16 BIT</text>
-        <g fill="#2f3238"><circle cx="352" cy="48" r="3"/><circle cx="648" cy="48" r="3"/><circle cx="352" cy="120" r="3"/><circle cx="648" cy="120" r="3"/></g>
+        <text x="500" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" letter-spacing="3.5" fill="#5d636c" class="sk print">CARTRIDGE · 16 BIT</text>
+        <g class="sk screws" fill="#2f3238"><circle cx="352" cy="48" r="3"/><circle cx="648" cy="48" r="3"/><circle cx="352" cy="120" r="3"/><circle cx="648" cy="120" r="3"/></g>
 
         <!-- power switch -->
         <g class="hit power-hit" id="powerHit" tabindex="0" role="switch" aria-checked="false" aria-label="Питание">
@@ -237,18 +298,18 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
           <rect x="94" y="196" width="120" height="32" rx="16" fill="#08090a" stroke="#2e3137"/>
           <g class="knob">
             <rect x="98" y="198" width="54" height="28" rx="14" fill="url(#gKnob)" stroke="#6b7079" stroke-width=".8"/>
-            <path d="M116 204V220M125 204V220M134 204V220" stroke="#22252a" stroke-width="2" stroke-linecap="round"/>
+            <path class="sk knob-ridge" d="M116 204V220M125 204V220M134 204V220" stroke="#22252a" stroke-width="2" stroke-linecap="round"/>
           </g>
-          <text x="96" y="256" font-family="Michroma, sans-serif" font-size="11" letter-spacing="3" fill="#7d838d">POWER</text>
-          <text x="212" y="256" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1" fill="#5b616a">OFF · ON</text>
+          <text x="96" y="256" font-family="Michroma, sans-serif" font-size="11" letter-spacing="3" fill="#7d838d" class="sk print-strong">POWER</text>
+          <text x="212" y="256" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1" fill="#5b616a" class="sk print">OFF · ON</text>
         </g>
         <circle class="led-glow" cx="114" cy="300" r="22" fill="url(#gLed)"/>
         <circle cx="114" cy="300" r="8" fill="#0a0a0b"/>
         <circle class="led" cx="114" cy="300" r="5.5"/>
-        <text x="132" y="304" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.5" fill="#5b616a">ON AIR</text>
+        <text x="132" y="304" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.5" fill="#5b616a" class="sk print">ON AIR</text>
 
         <!-- left speaker dots -->
-        <g fill="#0b0c0e">
+        <g class="sk holes" fill="#0b0c0e">
           <circle cx="100" cy="360" r="3.2"/><circle cx="116" cy="360" r="3.2"/><circle cx="132" cy="360" r="3.2"/><circle cx="148" cy="360" r="3.2"/><circle cx="164" cy="360" r="3.2"/>
           <circle cx="108" cy="374" r="3.2"/><circle cx="124" cy="374" r="3.2"/><circle cx="140" cy="374" r="3.2"/><circle cx="156" cy="374" r="3.2"/>
           <circle cx="100" cy="388" r="3.2"/><circle cx="116" cy="388" r="3.2"/><circle cx="132" cy="388" r="3.2"/><circle cx="148" cy="388" r="3.2"/><circle cx="164" cy="388" r="3.2"/>
@@ -263,29 +324,29 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
           <circle cx="866" cy="214" r="38" fill="#0a0b0c" stroke="#2e3137"/>
           <g class="reset-cap">
             <circle cx="866" cy="214" r="31" fill="url(#gReset)" stroke="#5a5e66" stroke-width=".8"/>
-            <circle cx="866" cy="214" r="20" fill="none" stroke="#1a1c20" stroke-width="1.2"/>
-            <circle cx="866" cy="214" r="11" fill="none" stroke="#1a1c20" stroke-width="1.2"/>
+            <circle class="sk reset-ring" cx="866" cy="214" r="20" fill="none" stroke="#1a1c20" stroke-width="1.2"/>
+            <circle class="sk reset-ring" cx="866" cy="214" r="11" fill="none" stroke="#1a1c20" stroke-width="1.2"/>
           </g>
-          <text x="866" y="276" text-anchor="middle" font-family="Michroma, sans-serif" font-size="11" letter-spacing="3" fill="#7d838d">RESET</text>
+          <text x="866" y="276" text-anchor="middle" font-family="Michroma, sans-serif" font-size="11" letter-spacing="3" fill="#7d838d" class="sk print-strong">RESET</text>
         </g>
 
         <!-- right vent -->
         <rect x="814" y="318" width="104" height="128" rx="14" fill="url(#ribs)" stroke="#2c2f35"/>
 
         <!-- front band -->
-        <path d="M70 540H930" stroke="#0b0c0e" stroke-width="2"/>
-        <path d="M70 542H930" stroke="#3a3d44" stroke-width="1" opacity=".5"/>
-        <text x="500" y="575" text-anchor="middle" font-family="Michroma, sans-serif" font-size="22" letter-spacing="9" fill="#0c0d0f">ORBITA·16</text>
-        <text x="500" y="574" text-anchor="middle" font-family="Michroma, sans-serif" font-size="22" letter-spacing="9" fill="#4a4e56">ORBITA·16</text>
-        <text x="500" y="592" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" letter-spacing="4" fill="#5b616a">SIXTEEN‑BIT ENTERTAINMENT SYSTEM</text>
+        <path class="sk band-lo" d="M70 540H930" stroke="#0b0c0e" stroke-width="2"/>
+        <path class="sk band-hi" d="M70 542H930" stroke="#3a3d44" stroke-width="1" opacity=".5"/>
+        <text x="500" y="575" text-anchor="middle" font-family="Michroma, sans-serif" font-size="22" letter-spacing="9" fill="#0c0d0f" class="sk logo-sh">ORBITA·16</text>
+        <text x="500" y="574" text-anchor="middle" font-family="Michroma, sans-serif" font-size="22" letter-spacing="9" fill="#4a4e56" class="sk logo">ORBITA·16</text>
+        <text x="500" y="592" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" letter-spacing="4" fill="#5b616a" class="sk print">SIXTEEN‑BIT ENTERTAINMENT SYSTEM</text>
         <!-- controller ports -->
         <g>
           <path d="M150 548H222L214 576H158Z" fill="#08090a" stroke="#33363d"/>
           <g fill="#2c2f35"><circle cx="166" cy="558" r="2"/><circle cx="178" cy="558" r="2"/><circle cx="190" cy="558" r="2"/><circle cx="202" cy="558" r="2"/><circle cx="214" cy="558" r="2"/><circle cx="172" cy="567" r="2"/><circle cx="184" cy="567" r="2"/><circle cx="196" cy="567" r="2"/><circle cx="208" cy="567" r="2"/></g>
-          <text x="236" y="570" font-family="Michroma, sans-serif" font-size="11" fill="#5b616a">1</text>
+          <text x="236" y="570" font-family="Michroma, sans-serif" font-size="11" fill="#5b616a" class="sk print">1</text>
           <path d="M778 548H850L842 576H786Z" fill="#08090a" stroke="#33363d"/>
           <g fill="#2c2f35"><circle cx="794" cy="558" r="2"/><circle cx="806" cy="558" r="2"/><circle cx="818" cy="558" r="2"/><circle cx="830" cy="558" r="2"/><circle cx="842" cy="558" r="2"/><circle cx="800" cy="567" r="2"/><circle cx="812" cy="567" r="2"/><circle cx="824" cy="567" r="2"/><circle cx="836" cy="567" r="2"/></g>
-          <text x="764" y="570" text-anchor="end" font-family="Michroma, sans-serif" font-size="11" fill="#5b616a">2</text>
+          <text x="764" y="570" text-anchor="end" font-family="Michroma, sans-serif" font-size="11" fill="#5b616a" class="sk print">2</text>
         </g>
       </g>
     </svg>
@@ -717,6 +778,26 @@ kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px
     btn.addEventListener('pointerdown', down);
     btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up); btn.addEventListener('lostpointercapture', up);
   });
+
+  // shell skin switcher
+  const skinBtns = [...document.querySelectorAll('.seg [data-skin]')];
+  function setSkin(name, save){
+    if (name !== 'white') name = 'black';
+    stage.dataset.skin = name;
+    skinBtns.forEach((b) => { const on = b.dataset.skin === name; b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; });
+    if (save) { try { localStorage.setItem('orbita-skin', name); } catch {} }
+  }
+  skinBtns.forEach((b) => {
+    b.addEventListener('click', () => setSkin(b.dataset.skin, true));
+    b.addEventListener('keydown', (e) => {
+      if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return;
+      e.preventDefault(); e.stopPropagation();
+      const next = skinBtns[(skinBtns.indexOf(b) + 1) % skinBtns.length];
+      setSkin(next.dataset.skin, true); next.focus();
+    });
+  });
+  let savedSkin = 'black'; try { savedSkin = localStorage.getItem('orbita-skin') || 'black'; } catch {}
+  setSkin(savedSkin, false);
 
   if (typeof Nostalgist === 'undefined') setStatus('err', 'Библиотека эмулятора не загрузилась');
   refresh();
