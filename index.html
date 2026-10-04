@@ -1,0 +1,726 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Консоль Орбита‑16</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&family=Unbounded:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one stage — the console seen from above, cartridge bay up top, a floating CRT monitor over the deck; a control strip underneath. */
+:root{
+  color-scheme: dark;
+  --ground:#0f1114;
+  --ground-2:#16191e;
+  --ink:#ebe7df;
+  --muted:#8d939c;
+  --line:#272c34;
+  --amber:#f0b440;
+  --amber-ink:#1b1408;
+  --led:#ff4634;
+  --phosphor:#ffd08a;
+  --f-brand:"Michroma","Eurostile","Arial Black",sans-serif;
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+html,body{background:var(--ground);color:var(--ink)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.5;
+  background:
+    radial-gradient(1200px 600px at 50% 36%, #1b1f26 0%, transparent 70%),
+    var(--ground);
+  min-height:100%;}
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:22px 48px;display:flex;flex-direction:column;gap:22px}
+
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 20px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(20px,3.2vw,28px);letter-spacing:.01em;margin:0;text-wrap:balance}
+h1 small{font-family:var(--f-mono);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:.12em;margin-left:10px;text-transform:uppercase;vertical-align:middle}
+.status{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:8px;min-width:0}
+.status i{width:8px;height:8px;border-radius:50%;background:#3a3f47;flex:none;transition:background .3s, box-shadow .3s}
+.status[data-s="ready"] i{background:#6fbf73}
+.status[data-s="run"] i{background:var(--led);box-shadow:0 0 8px var(--led)}
+.status[data-s="err"] i{background:#ff7a59}
+
+/* ---------- Stage ---------- */
+.stage{position:relative;width:100%;aspect-ratio:1000/940;max-width:100%;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.stage > svg.console{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+
+/* svg moving parts */
+.flap{transition:transform .45s cubic-bezier(.6,.05,.3,1);transform-box:fill-box}
+.stage.open .flap-l{transform:translateX(-96%)}
+.stage.open .flap-r{transform:translateX(96%)}
+.knob{transition:transform .35s cubic-bezier(.5,0,.2,1.3)}
+.stage.power .knob{transform:translateX(56px)}
+.led{fill:#3b1612;transition:fill .2s}
+.led-glow{opacity:0;transition:opacity .25s}
+.stage.power .led{fill:var(--led)}
+.stage.power .led-glow{opacity:1}
+.hit{cursor:pointer}
+.hit:focus-visible{outline:none}
+.hit:focus-visible .focus-ring{stroke:var(--amber);stroke-width:3}
+.reset-cap{transition:transform .08s;transform-box:fill-box;transform-origin:center}
+.reset.pressed .reset-cap,.reset:active .reset-cap{transform:scale(.93)}
+
+/* cartridge layer: only clipped at the slot line, free above and to the sides */
+.cart-zone{position:absolute;left:34%;width:32%;top:0;height:40.7%;
+  clip-path:inset(-100% -60% 0 -60%);}
+.cart{position:absolute;left:6.25%;width:87.5%;bottom:0;aspect-ratio:280/320;max-width:100%;
+  transform-origin:50% 100%;opacity:0;pointer-events:none;will-change:transform}
+.cart svg{width:100%;height:100%;display:block;overflow:visible}
+.ghost{position:absolute;left:6.25%;width:87.5%;bottom:3%;aspect-ratio:280/300;max-width:100%;
+  border:2px dashed #4a505a;border-radius:6% 6% 2% 2%/5% 5% 2% 2%;background:rgba(255,255,255,.015);
+  color:var(--muted);font:500 clamp(10px,1.45vw,14px)/1.35 var(--f-body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6em;text-align:center;padding:8%;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s,opacity .3s,transform .3s}
+.ghost b{font-family:var(--f-display);font-weight:500;color:var(--ink);font-size:1.12em;letter-spacing:.01em}
+.ghost span{font-family:var(--f-mono);font-size:.82em;letter-spacing:.04em}
+.ghost svg{width:22%;height:auto;opacity:.75}
+.ghost:hover,.ghost:focus-visible,.stage.drag .ghost{border-color:var(--amber);color:var(--ink);background:rgba(240,180,64,.06);outline:none}
+.ghost[hidden]{display:none!important}
+
+/* ---------- Monitor ---------- */
+.screen{position:absolute;left:22.5%;width:55%;top:47%;aspect-ratio:10/7.4;max-width:100%;box-sizing:border-box;
+  container-type:inline-size;
+  background:linear-gradient(160deg,#2a2d33 0%,#141619 55%,#0c0d0f 100%);
+  border-radius:3.2%/4.6%;padding:2.6% 2.6% 5.2%;
+  box-shadow:0 2px 0 #3a3e45 inset,0 -1px 0 #000 inset,0 30px 50px -14px rgba(0,0,0,.85),0 10px 18px rgba(0,0,0,.5);}
+.screen .badge{position:absolute;left:3.4%;bottom:1.4%;font:400 1.55cqw/1 var(--f-brand);letter-spacing:.32em;color:#6c727c}
+.screen .pwr{position:absolute;right:3.6%;bottom:1.8%;width:1.4cqw;height:1.4cqw;border-radius:50%;background:#2d1310;transition:background .2s,box-shadow .2s}
+.stage.power .screen .pwr{background:var(--led);box-shadow:0 0 1.6cqw var(--led)}
+.glass{position:relative;width:100%;height:100%;border-radius:4%/5.6%;overflow:hidden;background:#07090a;
+  box-shadow:0 0 0 .5cqw #050506,inset 0 0 6cqw rgba(0,0,0,.9)}
+.glass canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;opacity:0;transition:opacity .2s}
+.glass.live canvas{opacity:1}
+.glass.crt-on canvas{animation:crtOn .55s cubic-bezier(.2,.8,.2,1) both}
+.glass.crt-off canvas{animation:crtOff .38s cubic-bezier(.6,0,.9,.4) both}
+@keyframes crtOn{0%{transform:scale(1,.004);filter:brightness(6)}45%{transform:scale(1,.004);filter:brightness(4)}70%{transform:scale(1,1.04);filter:brightness(1.6)}100%{transform:none;filter:none}}
+@keyframes crtOff{0%{transform:none;filter:none}55%{transform:scale(1,.004);filter:brightness(5)}100%{transform:scale(0,.004);filter:brightness(8)}}
+.glass::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.26) 2px 3px);mix-blend-mode:multiply;opacity:.75}
+.glass::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:
+    radial-gradient(120% 90% at 50% 50%,transparent 58%,rgba(0,0,0,.55) 100%),
+    linear-gradient(155deg,rgba(255,255,255,.09) 0%,rgba(255,255,255,.02) 26%,transparent 27%);}
+.msg{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4cqw;text-align:center;padding:6cqw;
+  font:500 3.1cqw/1.35 var(--f-mono);color:#59606a;letter-spacing:.04em}
+.msg[hidden],dl[hidden],.empty-note[hidden]{display:none}
+.msg strong{font:500 4.6cqw/1.2 var(--f-display);color:#8a919b;letter-spacing:.02em}
+.msg.warm{color:var(--phosphor)}
+.msg.warm strong{color:var(--phosphor);text-shadow:0 0 2cqw rgba(255,190,90,.45)}
+.msg.err strong{color:#ff8a6a}
+.bar{width:44cqw;height:1.2cqw;border-radius:1cqw;background:#1d2126;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--phosphor);transition:width .2s}
+.screen:fullscreen{width:100vw;height:100vh;left:0;top:0;aspect-ratio:auto;border-radius:0;padding:0;background:#000;display:grid;place-items:center}
+.screen:fullscreen .glass{width:min(100vw,142.86vh);height:auto;aspect-ratio:10/7;border-radius:0}
+.screen:fullscreen .badge,.screen:fullscreen .pwr{display:none}
+
+/* ---------- Control strip ---------- */
+.deck{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;align-items:start}
+@media (max-width:760px){.deck{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--ground-2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0}
+.panel h2{font:600 11px/1 var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 16px;margin:0;font-size:14px}
+dt{color:var(--muted)}
+dd{margin:0;font-family:var(--f-mono);font-size:13px;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+dd.title{font-family:var(--f-display);font-weight:500;font-size:15px}
+.empty-note{color:var(--muted);font-size:14px;margin:0}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button.b{font:500 14px/1 var(--f-body);color:var(--ink);background:#20242b;border:1px solid #333944;border-radius:7px;padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s,border-color .15s,transform .05s}
+button.b:hover:not(:disabled){background:#272c34;border-color:#454c58}
+button.b:active:not(:disabled){transform:translateY(1px)}
+button.b:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+button.b:disabled{opacity:.38;cursor:not-allowed}
+button.b.primary{background:var(--amber);border-color:var(--amber);color:var(--amber-ink);font-weight:600}
+button.b.primary:hover:not(:disabled){background:#f6c35e;border-color:#f6c35e}
+button.b svg{width:16px;height:16px;flex:none}
+.keys{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.keys span{display:inline-flex;align-items:center;gap:6px}
+kbd{font:500 12px/1 var(--f-mono);color:var(--ink);background:#0d0f12;border:1px solid #3a404a;border-bottom-width:2px;border-radius:5px;padding:4px 7px;min-width:12px;text-align:center}
+.foot{font-size:12.5px;color:var(--muted);max-width:70ch;margin:0}
+
+/* touch pad, only for coarse pointers */
+.pad{display:none;justify-content:space-between;align-items:center;gap:16px;padding:14px 6px 0}
+@media (pointer:coarse){.pad{display:flex}}
+.dpad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:4px}
+.pad button{font:600 15px/1 var(--f-mono);color:var(--ink);background:#22262d;border:1px solid #3a404a;border-radius:10px;touch-action:none;-webkit-tap-highlight-color:transparent}
+.pad button.on{background:var(--amber);color:var(--amber-ink)}
+.dpad button:nth-child(1){grid-area:1/2}.dpad button:nth-child(2){grid-area:2/1}.dpad button:nth-child(3){grid-area:2/3}.dpad button:nth-child(4){grid-area:3/2}
+.abc{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+.abc .row{display:flex;gap:10px;transform:rotate(-12deg)}
+.abc .row button{width:54px;height:54px;border-radius:50%}
+.abc .start{width:84px;height:30px;border-radius:15px;font-size:11px;letter-spacing:.12em}
+
+@media (prefers-reduced-motion:reduce){
+  .flap,.knob,.glass canvas{transition:none!important}
+  .glass.crt-on canvas,.glass.crt-off canvas{animation-duration:.01s!important}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Орбита‑16 <small>16‑bit · эмулятор</small></h1>
+    <div class="status" id="status" data-s="load" role="status"><i></i><span id="statusText">Загружаю ядро Genesis Plus GX…</span></div>
+  </header>
+
+  <div class="stage" id="stage">
+    <svg class="console" viewBox="0 0 1000 940" aria-label="Консоль Орбита‑16, вид сверху" role="group">
+      <defs>
+        <linearGradient id="gBody" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2d3036"/><stop offset=".55" stop-color="#1c1e22"/><stop offset="1" stop-color="#131417"/>
+        </linearGradient>
+        <linearGradient id="gDeck" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#2a2d33"/><stop offset=".5" stop-color="#202226"/><stop offset="1" stop-color="#18191c"/>
+        </linearGradient>
+        <linearGradient id="gEdge" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#4a4e56"/><stop offset="1" stop-color="#1a1b1e"/>
+        </linearGradient>
+        <linearGradient id="gBay" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0b0c0e"/><stop offset="1" stop-color="#1d1f23"/>
+        </linearGradient>
+        <linearGradient id="gFlap" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3a3d44"/><stop offset="1" stop-color="#22242a"/>
+        </linearGradient>
+        <linearGradient id="gKnob" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5b6069"/><stop offset="1" stop-color="#2b2e34"/>
+        </linearGradient>
+        <radialGradient id="gReset" cx=".4" cy=".35" r=".75">
+          <stop offset="0" stop-color="#4b4f57"/><stop offset=".7" stop-color="#25272c"/><stop offset="1" stop-color="#16171a"/>
+        </radialGradient>
+        <radialGradient id="gLed" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#ff6a4d" stop-opacity=".9"/><stop offset="1" stop-color="#ff3b26" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="gShadow" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#000" stop-opacity=".7"/><stop offset="1" stop-color="#000" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="grain" x="0" y="0" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="7" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .06 0"/>
+          <feComposite in2="SourceGraphic" operator="in"/>
+        </filter>
+        <clipPath id="slotClip"><rect x="372" y="68" width="256" height="30" rx="4"/></clipPath>
+        <pattern id="ribs" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-32)">
+          <rect width="12" height="12" fill="#1c1e22"/><rect width="6" height="12" fill="#0a0b0c"/>
+        </pattern>
+      </defs>
+
+      <g transform="translate(0 300)">
+        <ellipse cx="500" cy="590" rx="520" ry="70" fill="url(#gShadow)"/>
+        <!-- body -->
+        <path d="M92 18H908Q982 18 982 92V498Q982 556 930 576L566 612H434L70 576Q18 556 18 498V92Q18 18 92 18Z" fill="url(#gEdge)"/>
+        <path d="M94 22H906Q976 22 976 92V494Q976 548 928 566L564 602H436L72 566Q24 548 24 494V92Q24 22 94 22Z" fill="url(#gBody)"/>
+        <path d="M94 22H906Q976 22 976 92V494Q976 548 928 566L564 602H436L72 566Q24 548 24 494V92Q24 22 94 22Z" fill="#fff" filter="url(#grain)"/>
+        <!-- raised deck -->
+        <rect x="60" y="52" width="880" height="470" rx="42" fill="#0e0f11"/>
+        <rect x="60" y="48" width="880" height="470" rx="42" fill="url(#gDeck)" stroke="#3a3d44" stroke-width="1.2"/>
+        <path d="M102 50H898" stroke="#4d515a" stroke-width="1.5" stroke-linecap="round" opacity=".7"/>
+
+        <!-- rear edge details -->
+        <g font-family="IBM Plex Mono, monospace" font-size="9" fill="#5b616a" letter-spacing="1.5">
+          <rect x="120" y="26" width="44" height="12" rx="3" fill="#0d0e10"/>
+          <text x="172" y="36">DC 9V</text>
+          <rect x="836" y="26" width="44" height="12" rx="3" fill="#0d0e10"/>
+          <text x="828" y="36" text-anchor="end">A/V OUT</text>
+        </g>
+
+        <!-- cartridge bay -->
+        <rect x="336" y="32" width="328" height="104" rx="20" fill="#0c0d0f"/>
+        <rect x="338" y="34" width="324" height="100" rx="19" fill="url(#gBay)" stroke="#33363d" stroke-width="1"/>
+        <rect x="368" y="64" width="264" height="38" rx="7" fill="#050506" stroke="#2c2f35"/>
+        <rect x="372" y="68" width="256" height="30" rx="4" fill="#000"/>
+        <g clip-path="url(#slotClip)">
+          <g class="flap flap-l"><rect x="372" y="68" width="128" height="30" fill="url(#gFlap)"/><path d="M498 69V97" stroke="#0a0a0b" stroke-width="2"/><path d="M380 72H494" stroke="#575b63" stroke-width="1" opacity=".6"/></g>
+          <g class="flap flap-r"><rect x="500" y="68" width="128" height="30" fill="url(#gFlap)"/><path d="M502 69V97" stroke="#0a0a0b" stroke-width="2"/><path d="M506 72H620" stroke="#575b63" stroke-width="1" opacity=".6"/></g>
+        </g>
+        <text x="500" y="124" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="9.5" letter-spacing="3.5" fill="#5d636c">CARTRIDGE · 16 BIT</text>
+        <g fill="#2f3238"><circle cx="352" cy="48" r="3"/><circle cx="648" cy="48" r="3"/><circle cx="352" cy="120" r="3"/><circle cx="648" cy="120" r="3"/></g>
+
+        <!-- power switch -->
+        <g class="hit power-hit" id="powerHit" tabindex="0" role="switch" aria-checked="false" aria-label="Питание">
+          <rect x="84" y="176" width="140" height="80" rx="14" fill="transparent"/>
+          <rect class="focus-ring" x="86" y="188" width="136" height="48" rx="24" fill="none" stroke="transparent"/>
+          <rect x="94" y="196" width="120" height="32" rx="16" fill="#08090a" stroke="#2e3137"/>
+          <g class="knob">
+            <rect x="98" y="198" width="54" height="28" rx="14" fill="url(#gKnob)" stroke="#6b7079" stroke-width=".8"/>
+            <path d="M116 204V220M125 204V220M134 204V220" stroke="#22252a" stroke-width="2" stroke-linecap="round"/>
+          </g>
+          <text x="96" y="256" font-family="Michroma, sans-serif" font-size="11" letter-spacing="3" fill="#7d838d">POWER</text>
+          <text x="212" y="256" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1" fill="#5b616a">OFF · ON</text>
+        </g>
+        <circle class="led-glow" cx="114" cy="300" r="22" fill="url(#gLed)"/>
+        <circle cx="114" cy="300" r="8" fill="#0a0a0b"/>
+        <circle class="led" cx="114" cy="300" r="5.5"/>
+        <text x="132" y="304" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.5" fill="#5b616a">ON AIR</text>
+
+        <!-- left speaker dots -->
+        <g fill="#0b0c0e">
+          <circle cx="100" cy="360" r="3.2"/><circle cx="116" cy="360" r="3.2"/><circle cx="132" cy="360" r="3.2"/><circle cx="148" cy="360" r="3.2"/><circle cx="164" cy="360" r="3.2"/>
+          <circle cx="108" cy="374" r="3.2"/><circle cx="124" cy="374" r="3.2"/><circle cx="140" cy="374" r="3.2"/><circle cx="156" cy="374" r="3.2"/>
+          <circle cx="100" cy="388" r="3.2"/><circle cx="116" cy="388" r="3.2"/><circle cx="132" cy="388" r="3.2"/><circle cx="148" cy="388" r="3.2"/><circle cx="164" cy="388" r="3.2"/>
+          <circle cx="108" cy="402" r="3.2"/><circle cx="124" cy="402" r="3.2"/><circle cx="140" cy="402" r="3.2"/><circle cx="156" cy="402" r="3.2"/>
+          <circle cx="100" cy="416" r="3.2"/><circle cx="116" cy="416" r="3.2"/><circle cx="132" cy="416" r="3.2"/><circle cx="148" cy="416" r="3.2"/><circle cx="164" cy="416" r="3.2"/>
+        </g>
+
+        <!-- reset button -->
+        <g class="hit reset" id="resetHit" tabindex="0" role="button" aria-label="Сброс">
+          <circle cx="866" cy="214" r="54" fill="transparent"/>
+          <circle class="focus-ring" cx="866" cy="214" r="44" fill="none" stroke="transparent"/>
+          <circle cx="866" cy="214" r="38" fill="#0a0b0c" stroke="#2e3137"/>
+          <g class="reset-cap">
+            <circle cx="866" cy="214" r="31" fill="url(#gReset)" stroke="#5a5e66" stroke-width=".8"/>
+            <circle cx="866" cy="214" r="20" fill="none" stroke="#1a1c20" stroke-width="1.2"/>
+            <circle cx="866" cy="214" r="11" fill="none" stroke="#1a1c20" stroke-width="1.2"/>
+          </g>
+          <text x="866" y="276" text-anchor="middle" font-family="Michroma, sans-serif" font-size="11" letter-spacing="3" fill="#7d838d">RESET</text>
+        </g>
+
+        <!-- right vent -->
+        <rect x="814" y="318" width="104" height="128" rx="14" fill="url(#ribs)" stroke="#2c2f35"/>
+
+        <!-- front band -->
+        <path d="M70 540H930" stroke="#0b0c0e" stroke-width="2"/>
+        <path d="M70 542H930" stroke="#3a3d44" stroke-width="1" opacity=".5"/>
+        <text x="500" y="575" text-anchor="middle" font-family="Michroma, sans-serif" font-size="22" letter-spacing="9" fill="#0c0d0f">ORBITA·16</text>
+        <text x="500" y="574" text-anchor="middle" font-family="Michroma, sans-serif" font-size="22" letter-spacing="9" fill="#4a4e56">ORBITA·16</text>
+        <text x="500" y="592" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="8.5" letter-spacing="4" fill="#5b616a">SIXTEEN‑BIT ENTERTAINMENT SYSTEM</text>
+        <!-- controller ports -->
+        <g>
+          <path d="M150 548H222L214 576H158Z" fill="#08090a" stroke="#33363d"/>
+          <g fill="#2c2f35"><circle cx="166" cy="558" r="2"/><circle cx="178" cy="558" r="2"/><circle cx="190" cy="558" r="2"/><circle cx="202" cy="558" r="2"/><circle cx="214" cy="558" r="2"/><circle cx="172" cy="567" r="2"/><circle cx="184" cy="567" r="2"/><circle cx="196" cy="567" r="2"/><circle cx="208" cy="567" r="2"/></g>
+          <text x="236" y="570" font-family="Michroma, sans-serif" font-size="11" fill="#5b616a">1</text>
+          <path d="M778 548H850L842 576H786Z" fill="#08090a" stroke="#33363d"/>
+          <g fill="#2c2f35"><circle cx="794" cy="558" r="2"/><circle cx="806" cy="558" r="2"/><circle cx="818" cy="558" r="2"/><circle cx="830" cy="558" r="2"/><circle cx="842" cy="558" r="2"/><circle cx="800" cy="567" r="2"/><circle cx="812" cy="567" r="2"/><circle cx="824" cy="567" r="2"/><circle cx="836" cy="567" r="2"/></g>
+          <text x="764" y="570" text-anchor="end" font-family="Michroma, sans-serif" font-size="11" fill="#5b616a">2</text>
+        </g>
+      </g>
+    </svg>
+
+    <div class="cart-zone" id="cartZone">
+      <div class="cart" id="cart" aria-hidden="true">
+        <svg viewBox="0 0 280 320">
+          <defs>
+            <linearGradient id="gCart" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#1b1c20"/><stop offset=".08" stop-color="#34363c"/><stop offset=".92" stop-color="#2c2e33"/><stop offset="1" stop-color="#17181b"/>
+            </linearGradient>
+            <linearGradient id="gLabel" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" id="lab0" stop-color="#1f3f8f"/><stop offset="1" id="lab1" stop-color="#e2493a"/>
+            </linearGradient>
+            <clipPath id="labClip"><rect x="28" y="46" width="224" height="232" rx="6"/></clipPath>
+          </defs>
+          <path d="M18 0H262Q280 0 280 18V320H0V18Q0 0 18 0Z" fill="url(#gCart)"/>
+          <path d="M18 1.5H262" stroke="#5a5d64" stroke-width="1.5" stroke-linecap="round"/>
+          <g stroke="#15161a" stroke-width="2.4" stroke-linecap="round">
+            <path d="M46 10H234M46 17H234M46 24H234M46 31H234"/>
+          </g>
+          <g stroke="#45484f" stroke-width="1" stroke-linecap="round" opacity=".7">
+            <path d="M46 12H234M46 19H234M46 26H234M46 33H234"/>
+          </g>
+          <rect x="24" y="42" width="232" height="240" rx="8" fill="#111214"/>
+          <g clip-path="url(#labClip)">
+            <rect x="28" y="46" width="224" height="232" fill="url(#gLabel)"/>
+            <circle id="labSun" cx="196" cy="186" r="62" fill="#ffd36b" opacity=".9"/>
+            <g id="labStripes" fill="#000" opacity=".22">
+              <path d="M28 214L252 150V164L28 228Z"/><path d="M28 238L252 174V186L28 250Z"/><path d="M28 260L252 196V206L28 270Z"/>
+            </g>
+            <rect x="28" y="46" width="224" height="58" fill="#0d0e10" opacity=".82"/>
+            <text id="labTitle1" x="140" y="72" text-anchor="middle" font-family="Unbounded, sans-serif" font-weight="700" font-size="15" fill="#fff" letter-spacing=".5">CARTRIDGE</text>
+            <text id="labTitle2" x="140" y="92" text-anchor="middle" font-family="Unbounded, sans-serif" font-weight="700" font-size="15" fill="#fff" letter-spacing=".5"></text>
+            <text x="38" y="268" font-family="IBM Plex Mono, monospace" font-size="9" fill="#fff" opacity=".85" letter-spacing="1.5" id="labSerial">16‑BIT</text>
+          </g>
+          <path d="M8 300H272" stroke="#111214" stroke-width="2"/>
+        </svg>
+      </div>
+      <button class="ghost" id="ghost" type="button" aria-label="Вставить картридж: выбрать файл ROM">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v3h16v-3"/></svg>
+        <b>Вставить картридж</b>
+        Нажмите или перетащите ROM
+        <span>.md · .bin · .gen · .smd · .sms · .gg</span>
+      </button>
+    </div>
+
+    <div class="screen" id="screen">
+      <div class="glass" id="glass">
+        <div class="msg" id="msg"><strong>Нет сигнала</strong><span>Вставьте картридж, чтобы включить консоль</span></div>
+      </div>
+      <span class="badge">ORBITA VIDEO</span>
+      <span class="pwr"></span>
+    </div>
+  </div>
+
+  <section class="deck">
+    <div class="panel">
+      <h2>Картридж</h2>
+      <p class="empty-note" id="noCart">Слот пуст. Заголовок ROM читается прямо из файла: название, регион, серийный номер.</p>
+      <dl id="cartInfo" hidden>
+        <dt>Игра</dt><dd class="title" id="iTitle"></dd>
+        <dt>Система</dt><dd id="iSys"></dd>
+        <dt>Регион</dt><dd id="iReg"></dd>
+        <dt>Серийный</dt><dd id="iSer"></dd>
+        <dt>Объём</dt><dd id="iSize"></dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h2>Управление</h2>
+      <div class="btns">
+        <button class="b primary" id="bLoad" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Вставить ROM</button>
+        <button class="b" id="bPower" type="button" disabled>Включить</button>
+        <button class="b" id="bReset" type="button" disabled>Сброс</button>
+        <button class="b" id="bPause" type="button" disabled>Пауза</button>
+        <button class="b" id="bMute" type="button" disabled>Без звука</button>
+        <button class="b" id="bFull" type="button" disabled>На весь экран</button>
+        <button class="b" id="bEject" type="button" disabled>Извлечь</button>
+      </div>
+      <div class="keys" aria-label="Клавиши">
+        <span><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> крестовина</span>
+        <span><kbd>Z</kbd> A</span><span><kbd>X</kbd> B</span><span><kbd>C</kbd> C</span>
+        <span><kbd>Enter</kbd> Start</span>
+        <span>Геймпад подключается сам</span>
+      </div>
+      <div class="pad" id="pad" aria-label="Сенсорный геймпад">
+        <div class="dpad"><button data-k="up" aria-label="Вверх">▲</button><button data-k="left" aria-label="Влево">◀</button><button data-k="right" aria-label="Вправо">▶</button><button data-k="down" aria-label="Вниз">▼</button></div>
+        <div class="abc">
+          <div class="row"><button data-k="y">A</button><button data-k="b">B</button><button data-k="a">C</button></div>
+          <button class="start" data-k="start">START</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Эмуляция: ядро Genesis Plus GX (WebAssembly) через RetroArch и Nostalgist. ROM‑файлы остаются в вашем браузере и никуда не отправляются. Запускайте только образы картриджей, которыми владеете.</p>
+  <input type="file" id="file" accept=".md,.bin,.gen,.smd,.sms,.gg,.sg" hidden>
+</div>
+
+<script src="nostalgist.umd.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage'), cart = $('cart'), ghost = $('ghost'), glass = $('glass'), msg = $('msg');
+  const statusEl = $('status'), statusText = $('statusText');
+  const B = { load:$('bLoad'), power:$('bPower'), reset:$('bReset'), pause:$('bPause'), mute:$('bMute'), full:$('bFull'), eject:$('bEject') };
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const T = (ms) => reduce ? 1 : ms;
+
+  const S = { cart:null, file:null, nd:null, canvas:null, power:false, paused:false, muted:false, busy:false };
+
+  function setStatus(s, text){ statusEl.dataset.s = s; statusText.textContent = text; }
+  function showMsg(title, sub, cls = '', extra = ''){
+    msg.className = 'msg ' + cls;
+    msg.innerHTML = '';
+    if (title){ const t = document.createElement('strong'); t.textContent = title; msg.append(t); }
+    if (sub){ const s = document.createElement('span'); s.textContent = sub; msg.append(s); }
+    if (extra === 'bar'){ const b = document.createElement('div'); b.className = 'bar'; b.innerHTML = '<i id="barFill"></i>'; msg.append(b); }
+    msg.hidden = false;
+  }
+
+  /* ---------- core prefetch ---------- */
+  const coreJsUrl = new URL('core.js', location.href).href;
+  const coreWasmUrl = new URL('core.wasm', location.href).href;
+  let coreLoadPct = 0;
+  const core = (async () => {
+    // wasm with progress
+    const res = await fetch(coreWasmUrl);
+    if (!res.ok) throw new Error('core.wasm: HTTP ' + res.status);
+    const total = +res.headers.get('content-length') || 7116317;
+    let got = 0; const chunks = [];
+    const reader = res.body.getReader();
+    for (;;){
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value); got += value.length;
+      coreLoadPct = Math.min(99, Math.round(got / total * 100));
+      setStatus('load', 'Загружаю ядро Genesis Plus GX… ' + coreLoadPct + '%');
+      const f = document.getElementById('barFill'); if (f) f.style.width = coreLoadPct + '%';
+    }
+    const wasm = new Blob(chunks, { type:'application/wasm' });
+    // core JS: prefer a same-origin module; fall back to Nostalgist's own blob import
+    let js;
+    try { await import(coreJsUrl); globalThis.__ndCoreModule = coreJsUrl;
+          js = new Blob(['/* core is imported as a module */'], { type:'application/javascript' }); }
+    catch (e) {
+      globalThis.__ndCoreModule = undefined;
+      const r = await fetch(new URL('core.js', location.href)); js = new Blob([await r.text()], { type:'application/javascript' });
+    }
+    setStatus('ready', 'Ядро готово · ' + (wasm.size / 1048576).toFixed(1) + ' МБ');
+    return { js, wasm };
+  })();
+  core.catch((e) => { setStatus('err', 'Ядро не загрузилось: ' + e.message); });
+
+  /* ---------- ROM header ---------- */
+  function ascii(u8, off, len){
+    let s = ''; for (let i = off; i < off + len && i < u8.length; i++){ const c = u8[i]; s += (c >= 32 && c < 127) ? String.fromCharCode(c) : ' '; }
+    return s.replace(/\s+/g, ' ').trim();
+  }
+  function parseRom(buf, name){
+    let u8 = new Uint8Array(buf);
+    const ext = (name.split('.').pop() || '').toLowerCase();
+    const base = name.replace(/\.[^.]+$/, '');
+    // .smd: 512-byte header + interleaved 16 KB blocks
+    if ((ext === 'smd' || (u8.length % 16384 === 512 && u8[8] === 0xAA && u8[9] === 0xBB)) && u8.length > 512 + 16384){
+      const blk = u8.subarray(512, 512 + 16384), out = new Uint8Array(16384);
+      for (let i = 0; i < 8192; i++){ out[i*2+1] = blk[i]; out[i*2] = blk[8192+i]; }
+      u8 = out;
+    }
+    const info = { size: buf.byteLength, file: name };
+    const sys = ascii(u8, 0x100, 16);
+    if (/SEGA/.test(sys)){
+      info.sys = /GENESIS/.test(sys) ? 'Sega Genesis' : 'Mega Drive / Genesis';
+      info.title = ascii(u8, 0x150, 48) || ascii(u8, 0x120, 48) || base;
+      info.serial = ascii(u8, 0x180, 14) || '—';
+      const reg = ascii(u8, 0x1F0, 3).toUpperCase();
+      const map = { J:'Япония', U:'США', E:'Европа' };
+      let r = [...new Set(reg.replace(/[^JUE]/g, ''))].map((c) => map[c]);
+      if (!r.length && /^[0-9A-F]$/.test(reg[0] || '')){ const v = parseInt(reg[0], 16); if (v & 1) r.push('Япония'); if (v & 4) r.push('США'); if (v & 8) r.push('Европа'); }
+      info.region = r.length ? r.join(', ') : (reg || '—');
+    } else {
+      const tmr = ascii(u8, 0x7FF0, 8);
+      info.sys = ext === 'gg' ? 'Game Gear' : (tmr === 'TMR SEGA' || ext === 'sms') ? 'Master System' : 'Неизвестно (без заголовка)';
+      info.title = base; info.serial = '—'; info.region = '—';
+    }
+    // label colours from a hash of the title
+    let h = 2166136261; for (const c of info.title) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+    info.hue = (h >>> 0) % 360;
+    return info;
+  }
+
+  function fmtSize(n){ return n >= 1048576 ? (n / 1048576).toFixed(2).replace(/\.?0+$/, '') + ' МБ · ' + Math.round(n * 8 / 1048576) + ' Мбит' : Math.round(n / 1024) + ' КБ'; }
+
+  function paintLabel(info){
+    const h = info.hue;
+    $('lab0').setAttribute('stop-color', `hsl(${h} 62% 30%)`);
+    $('lab1').setAttribute('stop-color', `hsl(${(h + 48) % 360} 78% 56%)`);
+    $('labSun').setAttribute('fill', `hsl(${(h + 180) % 360} 90% 70%)`);
+    $('labSun').setAttribute('cx', 110 + (h % 120)); $('labSun').setAttribute('r', 44 + (h % 30));
+    const words = info.title.toUpperCase().split(' ');
+    let l1 = '', l2 = '';
+    for (const w of words){ if ((l1 + ' ' + w).trim().length <= 16 && !l2) l1 = (l1 + ' ' + w).trim(); else l2 = (l2 + ' ' + w).trim(); }
+    if (l2.length > 18) l2 = l2.slice(0, 17) + '…';
+    const t1 = $('labTitle1'), t2 = $('labTitle2');
+    t1.textContent = l1 || 'CARTRIDGE'; t2.textContent = l2;
+    for (const t of [t1, t2]){ t.removeAttribute('textLength'); t.removeAttribute('lengthAdjust'); }
+    t1.setAttribute('y', l2 ? 70 : 80);
+    requestAnimationFrame(() => { for (const t of [t1, t2]) { try { if (t.getComputedTextLength() > 208){ t.setAttribute('textLength', 208); t.setAttribute('lengthAdjust', 'spacingAndGlyphs'); } } catch {} } });
+    $('labSerial').textContent = (info.serial && info.serial !== '—' ? info.serial : '16‑BIT CARTRIDGE');
+  }
+
+  function showInfo(info){
+    $('noCart').hidden = !!info; $('cartInfo').hidden = !info;
+    if (!info) return;
+    $('iTitle').textContent = info.title; $('iSys').textContent = info.sys; $('iReg').textContent = info.region;
+    $('iSer').textContent = info.serial; $('iSize').textContent = fmtSize(info.size);
+  }
+
+  /* ---------- animation helpers ---------- */
+  // run an animation, then bake its end state into inline style so nothing piles up
+  const anim = async (el, frames, opts) => {
+    const a = el.animate(frames, { fill:'forwards', ...opts, duration:T(opts.duration) });
+    await a.finished;
+    try { a.commitStyles(); } catch {}
+    a.cancel();
+  };
+  const wait = (ms) => new Promise((r) => setTimeout(r, T(ms)));
+  const SHADOW_HI = 'drop-shadow(0 34px 26px rgba(0,0,0,.55))';
+  const SHADOW_LO = 'drop-shadow(0 6px 6px rgba(0,0,0,.6))';
+
+  async function animateInsert(){
+    ghost.hidden = true;
+    cart.style.opacity = 1;
+    await anim(cart, [
+      { transform:'translateY(-62%) scale(1.18) rotate(-7deg)', opacity:0, filter:SHADOW_HI },
+      { transform:'translateY(-16%) scale(1.1) rotate(-2deg)', opacity:1, filter:SHADOW_HI, offset:.6 },
+      { transform:'translateY(-4%) scale(1) rotate(0deg)', opacity:1, filter:SHADOW_LO }
+    ], { duration:780, easing:'cubic-bezier(.2,.7,.25,1)' });
+    stage.classList.add('open');
+    await wait(380);
+    await anim(cart, [
+      { transform:'translateY(-4%) scale(1)', filter:SHADOW_LO },
+      { transform:'translateY(72%) scale(1)', filter:'drop-shadow(0 2px 2px rgba(0,0,0,.7))', offset:.86 },
+      { transform:'translateY(69%) scale(1)', filter:'drop-shadow(0 2px 2px rgba(0,0,0,.7))' }
+    ], { duration:620, easing:'cubic-bezier(.55,0,.35,1)' });
+  }
+  async function animateEject(){
+    await anim(cart, [
+      { transform:'translateY(69%) scale(1)', filter:'drop-shadow(0 2px 2px rgba(0,0,0,.7))' },
+      { transform:'translateY(-6%) scale(1.02)', filter:SHADOW_LO }
+    ], { duration:520, easing:'cubic-bezier(.3,1.25,.5,1)' });
+    stage.classList.remove('open');
+    await anim(cart, [
+      { transform:'translateY(-6%) scale(1.02) rotate(0)', opacity:1, filter:SHADOW_LO },
+      { transform:'translateY(-70%) scale(1.16) rotate(6deg)', opacity:0, filter:SHADOW_HI }
+    ], { duration:520, easing:'cubic-bezier(.5,0,.75,.4)' });
+    cart.getAnimations().forEach((a) => a.cancel());
+    cart.style.transform = ''; cart.style.filter = ''; cart.style.opacity = 0;
+    ghost.hidden = false;
+  }
+
+  /* ---------- emulator ---------- */
+  function freshCanvas(){
+    if (S.canvas) S.canvas.remove();
+    const c = document.createElement('canvas'); c.id = 'game';
+    glass.prepend(c); S.canvas = c; return c;
+  }
+
+  async function powerOn(){
+    if (!S.file || S.power || S.busy) return;
+    S.busy = true; refresh();
+    stage.classList.add('power'); setPowerAria(true);
+    showMsg('Запуск', coreLoadPct < 99 ? 'Догружаю ядро…' : 'Инициализация ядра…', 'warm', coreLoadPct < 99 ? 'bar' : '');
+    try {
+      const { js, wasm } = await core;
+      const canvas = freshCanvas();
+      S.nd = await Nostalgist.launch({
+        element: canvas,
+        core: 'genesis_plus_gx',
+        rom: S.file,
+        resolveCoreJs: () => js,
+        resolveCoreWasm: () => wasm,
+        size: { width: 960, height: 672 },
+        style: { backgroundColor:'#000', imageRendering:'pixelated' },
+        retroarchConfig: {
+          input_player1_y: 'z', input_player1_b: 'x', input_player1_a: 'c',
+          input_player1_start: 'enter', input_player1_select: 'rshift',
+          video_smooth: false
+        }
+      });
+      S.power = true; S.paused = false; S.muted = false;
+      msg.hidden = true;
+      glass.classList.remove('crt-off'); glass.classList.add('live', 'crt-on');
+      setStatus('run', 'Работает · ' + S.cart.title);
+    } catch (e) {
+      console.error(e);
+      stage.classList.remove('power'); setPowerAria(false);
+      showMsg('Не удалось запустить', String(e && e.message || e).slice(0, 140), 'err');
+      setStatus('err', 'Ошибка запуска');
+      S.nd = null;
+    }
+    S.busy = false; refresh();
+  }
+
+  async function powerOff(){
+    if (!S.power || S.busy) return;
+    S.busy = true; refresh();
+    glass.classList.remove('crt-on'); glass.classList.add('crt-off');
+    await wait(380);
+    try { S.nd && S.nd.exit({ removeCanvas: true }); } catch (e) { console.warn(e); }
+    S.nd = null; S.canvas = null; S.power = false; S.paused = false;
+    glass.classList.remove('live', 'crt-off');
+    stage.classList.remove('power'); setPowerAria(false);
+    showMsg('Питание выключено', S.cart ? S.cart.title : '', '');
+    setStatus('ready', 'Ядро готово');
+    S.busy = false; refresh();
+  }
+
+  async function insert(file){
+    if (S.busy) return;
+    if (S.cart) await eject();
+    S.busy = true; refresh();
+    let buf;
+    try { buf = await file.arrayBuffer(); } catch { S.busy = false; refresh(); return; }
+    if (buf.byteLength < 1024 || buf.byteLength > 16 * 1048576){
+      showMsg('Файл не похож на ROM', 'Нужен образ картриджа размером от 1 КБ до 16 МБ.', 'err');
+      S.busy = false; refresh(); return;
+    }
+    const info = parseRom(buf, file.name);
+    S.cart = info; S.file = new File([buf], file.name);
+    paintLabel(info); showInfo(info);
+    showMsg('Картридж', info.title, '');
+    await animateInsert();
+    S.busy = false;
+    await powerOn();
+  }
+
+  async function eject(){
+    if (!S.cart || S.busy) return;
+    if (S.power) await powerOff();
+    S.busy = true; refresh();
+    await animateEject();
+    S.cart = null; S.file = null; showInfo(null);
+    showMsg('Нет сигнала', 'Вставьте картридж, чтобы включить консоль');
+    S.busy = false; refresh();
+  }
+
+  function reset(){
+    if (!S.nd || !S.power) return;
+    const r = $('resetHit'); r.classList.add('pressed'); setTimeout(() => r.classList.remove('pressed'), 160);
+    try { S.nd.restart(); if (S.paused){ S.paused = false; } } catch (e) { console.warn(e); }
+    refresh();
+  }
+  function togglePause(){
+    if (!S.nd) return;
+    try { S.paused ? S.nd.resume() : S.nd.pause(); S.paused = !S.paused; } catch (e) { console.warn(e); }
+    if (S.paused) showMsg('Пауза', '', 'warm'); else msg.hidden = true;
+    refresh();
+  }
+  function toggleMute(){
+    if (!S.nd) return;
+    try { S.nd.sendCommand('MUTE'); S.muted = !S.muted; } catch (e) { console.warn(e); }
+    refresh();
+  }
+  async function fullscreen(){
+    const el = $('screen');
+    try { document.fullscreenElement ? await document.exitFullscreen() : await el.requestFullscreen(); }
+    catch { setStatus(statusEl.dataset.s, 'Полноэкранный режим недоступен здесь'); }
+  }
+
+  function setPowerAria(on){ $('powerHit').setAttribute('aria-checked', on ? 'true' : 'false'); }
+
+  function refresh(){
+    const has = !!S.cart, on = S.power, b = S.busy;
+    B.load.disabled = b;
+    B.power.disabled = b || !has; B.power.textContent = on ? 'Выключить' : 'Включить';
+    B.reset.disabled = b || !on;
+    B.pause.disabled = b || !on; B.pause.textContent = S.paused ? 'Продолжить' : 'Пауза';
+    B.mute.disabled = b || !on; B.mute.textContent = S.muted ? 'Включить звук' : 'Без звука';
+    B.full.disabled = !on;
+    B.eject.disabled = b || !has;
+  }
+
+  /* ---------- wiring ---------- */
+  const fileInput = $('file');
+  const pick = () => { if (!S.busy) { fileInput.value = ''; fileInput.click(); } };
+  fileInput.addEventListener('change', () => { const f = fileInput.files && fileInput.files[0]; if (f) insert(f); });
+  B.load.addEventListener('click', pick);
+  ghost.addEventListener('click', pick);
+  B.power.addEventListener('click', () => S.power ? powerOff() : powerOn());
+  B.reset.addEventListener('click', reset);
+  B.pause.addEventListener('click', togglePause);
+  B.mute.addEventListener('click', toggleMute);
+  B.full.addEventListener('click', fullscreen);
+  B.eject.addEventListener('click', eject);
+
+  const powerHit = $('powerHit'), resetHit = $('resetHit');
+  const powerAct = () => { if (!S.cart) { pick(); return; } S.power ? powerOff() : powerOn(); };
+  powerHit.addEventListener('click', powerAct);
+  resetHit.addEventListener('click', reset);
+  for (const [el, fn] of [[powerHit, powerAct], [resetHit, reset]]){
+    el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fn(); } });
+  }
+
+  // drag & drop anywhere on the page
+  let dragDepth = 0;
+  addEventListener('dragenter', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { dragDepth++; stage.classList.add('drag'); } });
+  addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) stage.classList.remove('drag'); });
+  addEventListener('dragover', (e) => { e.preventDefault(); });
+  addEventListener('drop', (e) => {
+    e.preventDefault(); dragDepth = 0; stage.classList.remove('drag');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) insert(f);
+  });
+
+  // keep arrows / space from scrolling the page while a game runs
+  addEventListener('keydown', (e) => {
+    if (!S.power) return;
+    const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+    if (e.key === 'Enter' && t && t.closest && t.closest('button,[role="button"],[role="switch"]')) { t.blur && t.blur(); }
+  }, { capture:true });
+
+  // touch pad
+  document.querySelectorAll('#pad button').forEach((btn) => {
+    const k = btn.dataset.k;
+    const down = (e) => { e.preventDefault(); btn.setPointerCapture && btn.setPointerCapture(e.pointerId); btn.classList.add('on'); try { S.nd && S.nd.pressDown(k); } catch {} };
+    const up = () => { if (!btn.classList.contains('on')) return; btn.classList.remove('on'); try { S.nd && S.nd.pressUp(k); } catch {} };
+    btn.addEventListener('pointerdown', down);
+    btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up); btn.addEventListener('lostpointercapture', up);
+  });
+
+  if (typeof Nostalgist === 'undefined') setStatus('err', 'Библиотека эмулятора не загрузилась');
+  refresh();
+})();
+</script>
+
+</body></html>
